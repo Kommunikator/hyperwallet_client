@@ -8,13 +8,11 @@ import (
 )
 
 type PaymentGateway struct {
-	Client
+	*Hyperwallet
 }
 
 func NewPaymentGateway() *PaymentGateway {
-	return &PaymentGateway{
-		NewClient(),
-	}
+	return &PaymentGateway{NewClient()}
 }
 
 func (c *PaymentGateway) CreatePayment(ctx context.Context, paymentData CreatePaymentData) (*Payment, error) {

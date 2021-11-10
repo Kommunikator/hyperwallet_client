@@ -2,15 +2,12 @@ package hyperwallet
 
 import (
 	"context"
-	"reflect"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+	"regexp"
 	"testing"
+	"time"
 )
-
-func NewTestUsersGateway() *UsersGateway {
-	return &UsersGateway{
-		NewTestClient(),
-	}
-}
 
 func TestCreateUserDataValidate(t *testing.T) {
 	t.Parallel()
@@ -24,14 +21,14 @@ func TestCreateUserDataValidate(t *testing.T) {
 		{
 			CreateUserData{
 				ProgramToken:     "tst-prg-123",
-				ClientUserId:     "qwerty",
+				ClientUserID:     "qwerty",
 				ProfileType:      PROFILE_TYPE_INDIVIDUAL,
 				FirstName:        "Alex",
 				LastName:         "Grete",
 				DateOfBirth:      "1988-01-05",
 				MobileNumber:     "+75001234567",
 				Email:            "tst@test.com",
-				DriversLicenseId: "1q2w3e4r",
+				DriversLicenseID: "1q2w3e4r",
 				AddressLine1:     "Pushkina str, 12/54-1",
 				City:             "Moscow",
 				StateProvince:    "NY",
@@ -43,14 +40,14 @@ func TestCreateUserDataValidate(t *testing.T) {
 		{
 			CreateUserData{
 				ProgramToken:     "tst-prg-123",
-				ClientUserId:     "qwerty",
+				ClientUserID:     "qwerty",
 				ProfileType:      PROFILE_TYPE_UNKNOWN,
 				FirstName:        "",
 				LastName:         "",
 				DateOfBirth:      "1988-01-05",
 				MobileNumber:     "+75001234567",
 				Email:            "@test.com",
-				DriversLicenseId: "1q2w3e4r",
+				DriversLicenseID: "1q2w3e4r",
 				AddressLine1:     "Pushkina str, 12/54-1",
 				StateProvince:    "NY",
 				Country:          "US",
@@ -64,7 +61,7 @@ func TestCreateUserDataValidate(t *testing.T) {
 		{
 			CreateUserData{
 				ProgramToken:  "tst-prg-123",
-				ClientUserId:  "qwerty longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+				ClientUserID:  "qwerty longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
 				ProfileType:   PROFILE_TYPE_UNKNOWN,
 				FirstName:     "Alex$%",
 				LastName:      "Grete$&",
@@ -77,7 +74,7 @@ func TestCreateUserDataValidate(t *testing.T) {
 				Country:       "longlonglonglonglonglonglonglonglonglonglonglonglong",
 				PostalCode:    "117968",
 			},
-			"Bad value for ClientUserId\n" +
+			"Bad value for ClientUserID\n" +
 				"Bad value for ProfileType\n" +
 				"Bad value for FirstName\n" +
 				"Bad value for LastName\n" +
@@ -119,14 +116,14 @@ func TestUpdateUserDataValidate(t *testing.T) {
 		{
 			UpdateUserData{
 				ProgramToken:     "tst-prg-123",
-				ClientUserId:     "qwerty",
+				ClientUserID:     "qwerty",
 				ProfileType:      PROFILE_TYPE_INDIVIDUAL,
 				FirstName:        "Alex",
 				LastName:         "Grete",
 				DateOfBirth:      "1988-01-05",
 				MobileNumber:     "+75001234567",
 				Email:            "tst@test.com",
-				DriversLicenseId: "1q2w3e4r",
+				DriversLicenseID: "1q2w3e4r",
 				AddressLine1:     "Pushkina str, 12/54-1",
 				City:             "Moscow",
 				StateProvince:    "NY",
@@ -143,7 +140,7 @@ func TestUpdateUserDataValidate(t *testing.T) {
 				DateOfBirth:      "1988-01-05",
 				MobileNumber:     "+75001234567",
 				Email:            "tst@test.com",
-				DriversLicenseId: "1q2w3e4r",
+				DriversLicenseID: "1q2w3e4r",
 				AddressLine1:     "Pushkina str, 12/54-1",
 				StateProvince:    "NY",
 				Country:          "US",
@@ -154,7 +151,7 @@ func TestUpdateUserDataValidate(t *testing.T) {
 		{
 			UpdateUserData{
 				ProgramToken:  "tst-prg-123",
-				ClientUserId:  "qwerty longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+				ClientUserID:  "qwerty longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
 				ProfileType:   PROFILE_TYPE_UNKNOWN,
 				FirstName:     "Alex$%",
 				LastName:      "Grete$&",
@@ -167,7 +164,7 @@ func TestUpdateUserDataValidate(t *testing.T) {
 				Country:       "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
 				PostalCode:    "117968",
 			},
-			"Bad value for ClientUserId\n" +
+			"Bad value for ClientUserID\n" +
 				"Bad value for ProfileType\n" +
 				"Bad value for FirstName\n" +
 				"Bad value for LastName\n" +
@@ -198,13 +195,14 @@ func TestUpdateUserDataValidate(t *testing.T) {
 }
 
 func TestGetUsers(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
 
-	users, err := testClient.GetUserList(ctx, GetUserListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &UserList{
 		Count:  2,
@@ -266,18 +264,35 @@ func TestGetUsers(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(users, expected) {
-		t.Errorf("Unexpected result of GetUserList func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":2,\"offset\":0,\"limit\":10,\"data\":[{\"token\":\"usr-b6979792-22db-4777-8088-f24128833a28\",\"status\":\"PRE_ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-20T14:22:04\",\"clientUserId\":\"1634731156873\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alex\",\"lastName\":\"Niki\",\"dateOfBirth\":\"1989-01-02\",\"email\":\"exa@gmail.comm\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"language\":\"en\",\"timeZone\":\"GMT\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-b6979792-22db-4777-8088-f24128833a28\"}]},{\"token\":\"usr-bc8310f4-58ad-437b-a2f9-4865a0b61d3d\",\"status\":\"PRE_ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T10:24:41\",\"clientUserId\":\"16347311568skldfj73\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alexius\",\"lastName\":\"Nikifd\",\"dateOfBirth\":\"1989-01-03\",\"email\":\"edsxa@gmail.comm\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"language\":\"en\",\"timeZone\":\"GMT\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-bc8310f4-58ad-437b-a2f9-4865a0b61d3d\"}]}]}"),
+		),
+	)
+
+	ug := UsersGateway{testClient}
+
+	userList, err := ug.GetUserList(ctx, GetUserListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, userList)
 	}
 }
 
 func TestCreateUser(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	createUserData := CreateUserData{
 		ProgramToken:  "prg-5cd8a525-0553-4e30-8e47-c5440b743855",
-		ClientUserId:  "qwer123tsd",
+		ClientUserID:  "qwer123tsd",
 		ProfileType:   PROFILE_TYPE_INDIVIDUAL,
 		FirstName:     "Testius",
 		LastName:      "Rewersus",
@@ -317,19 +332,31 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	user, err := testClient.CreateUser(ctx, createUserData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	httpmock.RegisterRegexpResponder(
+		"POST",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"usr-2bb8b9d8-f3c3-43fc-a3db-d473ac57a58e\",\"status\":\"PRE_ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-29T09:45:26\",\"clientUserId\":\"qwer123tsd\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Testius\",\"lastName\":\"Rewersus\",\"dateOfBirth\":\"1985-01-03\",\"email\":\"qwe123@gmail.comm\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"language\":\"en\",\"timeZone\":\"GMT\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-2bb8b9d8-f3c3-43fc-a3db-d473ac57a58e\"}]}"),
+		),
+	)
 
-	if !reflect.DeepEqual(user, expected) {
-		t.Errorf("Unexpected result of CreateUser func")
+	ug := UsersGateway{testClient}
+
+	user, err := ug.CreateUser(ctx, createUserData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, user)
 	}
 }
 
 func TestRetrieveUser(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &User{
 		Token:              "usr-c9d3126d-e26d-459d-9d66-9538876848be",
@@ -358,35 +385,63 @@ func TestRetrieveUser(t *testing.T) {
 		},
 	}
 
-	user, err := testClient.RetrieveUser(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
 
-	if !reflect.DeepEqual(user, expected) {
-		t.Errorf("Unexpected result of RetrieveUser func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"status\":\"PRE_ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T10:44:27\",\"clientUserId\":\"163qwe4731sd1568skldfj73\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alexius greate\",\"lastName\":\"Nikifd ddd\",\"dateOfBirth\":\"1990-01-03\",\"email\":\"ewdsxva@gmail.comm\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"language\":\"en\",\"timeZone\":\"GMT\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be\"}]}"),
+		),
+	)
+
+	ug := UsersGateway{testClient}
+
+	user, err := ug.RetrieveUser(ctx, userToken)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, user)
 	}
 }
 
 func TestCreateAuthenticationToken(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &AuthenticationToken{Value: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c3ItYzlkMzEyNmQtZTI2ZC00NTlkLTlkNjYtOTUzODg3Njg0OGJlIiwiaWF0IjoxNjM1NTEyODA3LCJleHAiOjE2MzU1MTM0MDcsImF1ZCI6InBndS0zOWVmZDIwNi1mNjk1LTQwMDItYTEwZS04YzNhZTI2ZGUzZmEiLCJpc3MiOiJwcmctNWNkOGE1MjUtMDU1My00ZTMwLThlNDctYzU0NDBiNzQzODU1IiwicmVzdC11cmkiOiJodHRwczovL2FwaS5zYW5kYm94Lmh5cGVyd2FsbGV0LmNvbS9yZXN0L3YzLyIsImdyYXBocWwtdXJpIjoiaHR0cHM6Ly9hcGkuc2FuZGJveC5oeXBlcndhbGxldC5jb20vZ3JhcGhxbCIsImluc2lnaHRzLXVyaSI6Imh0dHBzOi8vYXBpLnBheXBhbC5jb20vdjEvdHJhY2tpbmcvYmF0Y2gvZXZlbnRzIiwiZW52aXJvbm1lbnQiOiJVQVQiLCJwcm9ncmFtLW1vZGVsIjoiRElSRUNUX0RFUE9TSVRfTU9ERUwifQ.axhkW3uZlssdJtaWjGX5ivFHxvue28xngvb1fLpL9J3shQ_AvdHG1PWlmRvEkGY4_A4eVaFePVazGIt_Xqs9Kg"}
 
-	token, err := testClient.CreateAuthenticationToken(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
 
-	if !reflect.DeepEqual(token, expected) {
-		t.Errorf("Unexpected result of CreateAuthenticationToken func")
+	httpmock.RegisterRegexpResponder(
+		"POST",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/authentication-token"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"value\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c3ItYzlkMzEyNmQtZTI2ZC00NTlkLTlkNjYtOTUzODg3Njg0OGJlIiwiaWF0IjoxNjM1NTEyODA3LCJleHAiOjE2MzU1MTM0MDcsImF1ZCI6InBndS0zOWVmZDIwNi1mNjk1LTQwMDItYTEwZS04YzNhZTI2ZGUzZmEiLCJpc3MiOiJwcmctNWNkOGE1MjUtMDU1My00ZTMwLThlNDctYzU0NDBiNzQzODU1IiwicmVzdC11cmkiOiJodHRwczovL2FwaS5zYW5kYm94Lmh5cGVyd2FsbGV0LmNvbS9yZXN0L3YzLyIsImdyYXBocWwtdXJpIjoiaHR0cHM6Ly9hcGkuc2FuZGJveC5oeXBlcndhbGxldC5jb20vZ3JhcGhxbCIsImluc2lnaHRzLXVyaSI6Imh0dHBzOi8vYXBpLnBheXBhbC5jb20vdjEvdHJhY2tpbmcvYmF0Y2gvZXZlbnRzIiwiZW52aXJvbm1lbnQiOiJVQVQiLCJwcm9ncmFtLW1vZGVsIjoiRElSRUNUX0RFUE9TSVRfTU9ERUwifQ.axhkW3uZlssdJtaWjGX5ivFHxvue28xngvb1fLpL9J3shQ_AvdHG1PWlmRvEkGY4_A4eVaFePVazGIt_Xqs9Kg\"}"),
+		),
+	)
+
+	ug := UsersGateway{testClient}
+
+	authToken, err := ug.CreateAuthenticationToken(ctx, userToken)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, authToken)
 	}
 }
 
 func TestGetUserBalanceList(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &UserBalanceList{
 		Count:  1,
@@ -406,19 +461,33 @@ func TestGetUserBalanceList(t *testing.T) {
 		},
 	}
 
-	balanceList, err := testClient.GetUserBalanceList(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", GetUserBalanceListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
 
-	if !reflect.DeepEqual(balanceList, expected) {
-		t.Errorf("Unexpected result of GetUserBalanceList func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/balances"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":1,\"offset\":0,\"limit\":10,\"data\":[{\"currency\":\"USD\",\"amount\":\"0.00\"}],\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/balances?offset=0\\u0026limit=10\"}]}"),
+		),
+	)
+
+	ug := UsersGateway{testClient}
+
+	balanceList, err := ug.GetUserBalanceList(ctx, userToken, GetUserBalanceListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, balanceList)
 	}
 }
 
 func TestGetUserReceiptList(t *testing.T) {
-	testClient := NewTestUsersGateway()
-	ctx := context.Background()
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &UserReceiptList{
 		Count:  4,
@@ -438,7 +507,7 @@ func TestGetUserReceiptList(t *testing.T) {
 				Currency:         "USD",
 				Details: struct {
 					ClientPaymentID string `json:"clientPaymentId"`
-    				PayeeName       string `json:"payeeName"`
+					PayeeName       string `json:"payeeName"`
 				}{
 					ClientPaymentID: "163qwe4731sd1568skldfj73asd",
 					PayeeName: "Alexius greate Nikifd ddd",
@@ -510,12 +579,20 @@ func TestGetUserReceiptList(t *testing.T) {
 		},
 	}
 
-	balanceList, err := testClient.GetUserReceiptList(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", GetUserReceiptListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
 
-	if !reflect.DeepEqual(balanceList, expected) {
-		t.Errorf("Unexpected result of GetUserBalanceList func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/receipts"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":4,\"offset\":0,\"limit\":10,\"data\":[{\"token\":\"rcp-4c2bbee8-efc5-476f-9de7-afbeb9dd0610\",\"journalId\":\"9192071\",\"type\":\"PAYMENT\",\"createdOn\":\"2021-10-25T06:55:03\",\"entry\":\"CREDIT\",\"sourceToken\":\"act-54f85d42-b564-41c5-8965-bc6a3de32877\",\"destinationToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"amount\":\"100.00\",\"fee\":\"0.00\",\"currency\":\"USD\",\"details\":{\"clientPaymentId\":\"163qwe4731sd1568skldfj73asd\",\"payeeName\":\"Alexius greate Nikifd ddd\"}},{\"token\":\"rcp-d83ba620-1504-4499-b32f-46d21ec426fd\",\"journalId\":\"9192072\",\"type\":\"TRANSFER_TO_BANK_ACCOUNT\",\"createdOn\":\"2021-10-25T06:55:03\",\"entry\":\"DEBIT\",\"sourceToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"amount\":\"100.00\",\"fee\":\"0.00\",\"currency\":\"USD\",\"details\":{\"clientPaymentId\":\"\",\"payeeName\":\"Alex Serg Niki\"}},{\"token\":\"rcp-c882f630-b97e-422e-a82c-c6bb2d35fbda\",\"journalId\":\"9192401\",\"type\":\"PAYMENT\",\"createdOn\":\"2021-10-25T09:01:40\",\"entry\":\"CREDIT\",\"sourceToken\":\"act-54f85d42-b564-41c5-8965-bc6a3de32877\",\"destinationToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"amount\":\"100.00\",\"fee\":\"0.00\",\"currency\":\"USD\",\"details\":{\"clientPaymentId\":\"163qwe4731cz3d1568skldfj73asd\",\"payeeName\":\"Alexius greate Nikifd ddd\"}},{\"token\":\"rcp-0ca4345d-8711-42f3-a27b-d27822b0f15a\",\"journalId\":\"9192402\",\"type\":\"TRANSFER_TO_BANK_ACCOUNT\",\"createdOn\":\"2021-10-25T09:01:40\",\"entry\":\"DEBIT\",\"sourceToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"amount\":\"100.00\",\"fee\":\"0.00\",\"currency\":\"USD\",\"details\":{\"clientPaymentId\":\"\",\"payeeName\":\"Alex Serg Niki\"}}],\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/receipts?offset=0\\u0026limit=10\"}]}"),
+		),
+	)
+
+	ug := UsersGateway{testClient}
+
+	receiptList, err := ug.GetUserReceiptList(ctx, userToken, GetUserReceiptListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, receiptList)
 	}
 }

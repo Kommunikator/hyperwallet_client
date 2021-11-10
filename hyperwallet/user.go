@@ -24,7 +24,7 @@ const (
 
 type CreateUserData struct {
 	ProgramToken                      string `json:"programToken,omitempty"  validate:"required"`
-	ClientUserId                      string `json:"clientUserId,omitempty"  validate:"required"`
+	ClientUserID                      string `json:"clientUserId,omitempty"  validate:"required"`
 	ProfileType                       string `json:"profileType,omitempty" validate:"required,alpha,uppercase"`
 	FirstName                         string `json:"firstName,omitempty" validate:"required"`
 	MiddleName                        string `json:"middleName,omitempty" validate:"omitempty"`
@@ -35,11 +35,11 @@ type CreateUserData struct {
 	PhoneNumber                       string `json:"phoneNumber,omitempty" validate:"omitempty"`
 	MobileNumber                      string `json:"mobileNumber,omitempty" validate:"omitempty"`
 	Email                             string `json:"email,omitempty" validate:"required,email"`
-	GovernmentId                      string `json:"governmentId,omitempty" validate:"omitempty"`
-	GovernmentIdType                  string `json:"governmentIdType,omitempty" validate:"omitempty"`
-	PassportId                        string `json:"passportId,omitempty" validate:"omitempty"`
-	DriversLicenseId                  string `json:"driversLicenseId,omitempty" validate:"omitempty"`
-	EmployerId                        string `json:"employerId,omitempty" validate:"omitempty"`
+	GovernmentID                      string `json:"governmentId,omitempty" validate:"omitempty"`
+	GovernmentIDType                  string `json:"governmentIdType,omitempty" validate:"omitempty"`
+	PassportID                        string `json:"passportId,omitempty" validate:"omitempty"`
+	DriversLicenseID                  string `json:"driversLicenseId,omitempty" validate:"omitempty"`
+	EmployerID                        string `json:"employerId,omitempty" validate:"omitempty"`
 	AddressLine1                      string `json:"addressLine1,omitempty" validate:"required"`
 	AddressLine2                      string `json:"addressLine2,omitempty" validate:"omitempty"`
 	City                              string `json:"city,omitempty" validate:"required"`
@@ -50,7 +50,7 @@ type CreateUserData struct {
 	BusinessType                      string `json:"businessType,omitempty" validate:"omitempty"`
 	BusinessName                      string `json:"businessName,omitempty" validate:"omitempty"`
 	BusinessOperatingName             string `json:"businessOperatingName,omitempty" validate:"omitempty"`
-	BusinessRegistrationId            string `json:"businessRegistrationId,omitempty" validate:"omitempty"`
+	BusinessRegistrationID            string `json:"businessRegistrationId,omitempty" validate:"omitempty"`
 	BusinessRegistrationStateProvince string `json:"businessRegistrationStateProvince,omitempty" validate:"omitempty"`
 	BusinessRegistrationCountry       string `json:"businessRegistrationCountry,omitempty" validate:"omitempty"`
 	BusinessContactRole               string `json:"businessContactRole,omitempty" validate:"omitempty"`
@@ -70,12 +70,12 @@ func (c *CreateUserData) Validate() error {
 
 	var errorTexts []string
 
-	m, err := regexp.MatchString(`^[\w+,-./~|]{1,75}$`, c.ClientUserId)
+	m, err := regexp.MatchString(`^[\w+,-./~|]{1,75}$`, c.ClientUserID)
 	if err != nil {
 		return err
 	}
 	if m == false {
-		errorTexts = append(errorTexts, "Bad value for ClientUserId")
+		errorTexts = append(errorTexts, "Bad value for ClientUserID")
 	}
 
 	m, err = regexp.MatchString(`^INDIVIDUAL|BUSINESS$`, c.ProfileType)
@@ -127,13 +127,13 @@ func (c *CreateUserData) Validate() error {
 		errorTexts = append(errorTexts, "Bad value for DateOfBirth")
 	}
 
-	if c.GovernmentIdType != "" {
-		m, err = regexp.MatchString(`^PASSPORT|NATIONAL_ID_CARD$`, c.GovernmentIdType)
+	if c.GovernmentIDType != "" {
+		m, err = regexp.MatchString(`^PASSPORT|NATIONAL_ID_CARD$`, c.GovernmentIDType)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for GovernmentIdType")
+			errorTexts = append(errorTexts, "Bad value for GovernmentIDType")
 		}
 	}
 
@@ -207,13 +207,13 @@ func (c *CreateUserData) Validate() error {
 		}
 	}
 
-	if c.BusinessRegistrationId != "" {
-		m, err = regexp.MatchString(`^[\w ()+\-./]{1,50}$`, c.BusinessRegistrationId)
+	if c.BusinessRegistrationID != "" {
+		m, err = regexp.MatchString(`^[\w ()+\-./]{1,50}$`, c.BusinessRegistrationID)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for BusinessRegistrationId")
+			errorTexts = append(errorTexts, "Bad value for BusinessRegistrationID")
 		}
 	}
 
@@ -316,7 +316,7 @@ func (c *CreateUserData) Validate() error {
 
 type UpdateUserData struct {
 	ProgramToken                      string `json:"programToken,omitempty"  validate:"omitempty"`
-	ClientUserId                      string `json:"clientUserId,omitempty"  validate:"omitempty"`
+	ClientUserID                      string `json:"clientUserId,omitempty"  validate:"omitempty"`
 	ProfileType                       string `json:"profileType,omitempty" validate:"omitempty,alpha,uppercase"`
 	FirstName                         string `json:"firstName,omitempty" validate:"omitempty"`
 	MiddleName                        string `json:"middleName,omitempty" validate:"omitempty"`
@@ -327,11 +327,11 @@ type UpdateUserData struct {
 	PhoneNumber                       string `json:"phoneNumber,omitempty" validate:"omitempty"`
 	MobileNumber                      string `json:"mobileNumber,omitempty" validate:"omitempty"`
 	Email                             string `json:"email,omitempty" validate:"omitempty,email"`
-	GovernmentId                      string `json:"governmentId,omitempty" validate:"omitempty"`
-	GovernmentIdType                  string `json:"governmentIdType,omitempty" validate:"omitempty"`
-	PassportId                        string `json:"passportId,omitempty" validate:"omitempty"`
-	DriversLicenseId                  string `json:"driversLicenseId,omitempty" validate:"omitempty"`
-	EmployerId                        string `json:"employerId,omitempty" validate:"omitempty"`
+	GovernmentID                      string `json:"governmentId,omitempty" validate:"omitempty"`
+	GovernmentIDType                  string `json:"governmentIdType,omitempty" validate:"omitempty"`
+	PassportID                        string `json:"passportId,omitempty" validate:"omitempty"`
+	DriversLicenseID                  string `json:"driversLicenseId,omitempty" validate:"omitempty"`
+	EmployerID                        string `json:"employerId,omitempty" validate:"omitempty"`
 	AddressLine1                      string `json:"addressLine1,omitempty" validate:"omitempty"`
 	AddressLine2                      string `json:"addressLine2,omitempty" validate:"omitempty"`
 	City                              string `json:"city,omitempty" validate:"omitempty"`
@@ -342,7 +342,7 @@ type UpdateUserData struct {
 	BusinessType                      string `json:"businessType,omitempty" validate:"omitempty"`
 	BusinessName                      string `json:"businessName,omitempty" validate:"omitempty"`
 	BusinessOperatingName             string `json:"businessOperatingName,omitempty" validate:"omitempty"`
-	BusinessRegistrationId            string `json:"businessRegistrationId,omitempty" validate:"omitempty"`
+	BusinessRegistrationID            string `json:"businessRegistrationId,omitempty" validate:"omitempty"`
 	BusinessRegistrationStateProvince string `json:"businessRegistrationStateProvince,omitempty" validate:"omitempty"`
 	BusinessRegistrationCountry       string `json:"businessRegistrationCountry,omitempty" validate:"omitempty"`
 	BusinessContactRole               string `json:"businessContactRole,omitempty" validate:"omitempty"`
@@ -363,13 +363,13 @@ func (c *UpdateUserData) Validate() error {
 	var m bool
 	var errorTexts []string
 
-	if c.ClientUserId != "" {
-		m, err := regexp.MatchString(`^[\w+,-./~|]{1,75}$`, c.ClientUserId)
+	if c.ClientUserID != "" {
+		m, err := regexp.MatchString(`^[\w+,-./~|]{1,75}$`, c.ClientUserID)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for ClientUserId")
+			errorTexts = append(errorTexts, "Bad value for ClientUserID")
 		}
 	}
 
@@ -431,13 +431,13 @@ func (c *UpdateUserData) Validate() error {
 		}
 	}
 
-	if c.GovernmentIdType != "" {
-		m, err = regexp.MatchString(`^PASSPORT|NATIONAL_ID_CARD$`, c.GovernmentIdType)
+	if c.GovernmentIDType != "" {
+		m, err = regexp.MatchString(`^PASSPORT|NATIONAL_ID_CARD$`, c.GovernmentIDType)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for GovernmentIdType")
+			errorTexts = append(errorTexts, "Bad value for GovernmentIDType")
 		}
 	}
 
@@ -521,13 +521,13 @@ func (c *UpdateUserData) Validate() error {
 		}
 	}
 
-	if c.BusinessRegistrationId != "" {
-		m, err = regexp.MatchString(`^[\w ()+\-./]{1,50}$`, c.BusinessRegistrationId)
+	if c.BusinessRegistrationID != "" {
+		m, err = regexp.MatchString(`^[\w ()+\-./]{1,50}$`, c.BusinessRegistrationID)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for BusinessRegistrationId")
+			errorTexts = append(errorTexts, "Bad value for BusinessRegistrationID")
 		}
 	}
 
@@ -669,7 +669,7 @@ type User struct {
 
 type Link struct {
 	Params Params `json:"params"`
-	Href string `json:"href"`
+	Href   string `json:"href"`
 }
 
 type Params struct {
@@ -697,7 +697,7 @@ type UserBalanceList struct {
 	Offset int           `json:"offset"`
 	Limit  int           `json:"limit"`
 	Data   []UserBalance `json:"data"`
-	Links  []Link `json:"links"`
+	Links  []Link        `json:"links"`
 }
 
 type UserReceipt struct {
@@ -722,11 +722,11 @@ type UserReceiptList struct {
 	Offset int           `json:"offset"`
 	Limit  int           `json:"limit"`
 	Data   []UserReceipt `json:"data"`
-	Links  []Link `json:"links"`
+	Links  []Link        `json:"links"`
 }
 
 type GetUserListQuery struct {
-	ClientUserId       string    `url:"clientUserId,omitempty"`
+	ClientUserID       string    `url:"clientUserId,omitempty"`
 	CreatedBefore      time.Time `url:"createdBefore,omitempty" layout:"2006-01-02T15:04:05"`
 	CreatedAfter       time.Time `url:"createdBefore,omitempty" layout:"2006-01-02T15:04:05"`
 	Email              string    `url:"email,omitempty" validate:"email"`

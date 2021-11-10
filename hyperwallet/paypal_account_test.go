@@ -2,15 +2,12 @@ package hyperwallet
 
 import (
 	"context"
-	"reflect"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+	"regexp"
 	"testing"
+	"time"
 )
-
-func NewTestPaypalAccountGateway() *PaypalAccountGateway {
-	return &PaypalAccountGateway{
-		NewTestClient(),
-	}
-}
 
 func TestCreatePaypalAccountDataValidate(t *testing.T) {
 	t.Parallel()
@@ -117,14 +114,14 @@ func TestUpdatePaypalAccountDataValidate(t *testing.T) {
 }
 
 func TestGetPaypalAccountList(t *testing.T) {
-	testClient := NewTestPaypalAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	paypalAccountList, err := testClient.GetPaypalAccountList(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", GetPaypalAccountListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &PaypalAccountList{
 		Count:  1,
@@ -150,15 +147,33 @@ func TestGetPaypalAccountList(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(paypalAccountList, expected) {
-		t.Errorf("Unexpected result of GetPaypalAccountList func")
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/paypal-accounts"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":1,\"offset\":0,\"limit\":10,\"data\":[{\"token\":\"trm-0d66f04d-4340-4820-87a3-721a5e4a2754\",\"type\":\"PAYPAL_ACCOUNT\",\"status\":\"ACTIVATED\",\"createdOn\":\"2021-10-21T14:07:23\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"email\":\"94105@asde.com\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/paypal-accounts/trm-0d66f04d-4340-4820-87a3-721a5e4a2754\"}]}]}"),
+		),
+	)
+
+	pg := PaypalAccountGateway{testClient}
+
+	paypalAccountList, err := pg.GetPaypalAccountList(ctx, userToken, GetPaypalAccountListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, paypalAccountList)
 	}
 }
 
 func TestCreatePaypalAccount(t *testing.T) {
-	testClient := NewTestPaypalAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	createPaypalAccountData := CreatePaypalAccountData{
 		TransferMethodCountry:  "US",
@@ -184,20 +199,33 @@ func TestCreatePaypalAccount(t *testing.T) {
 		},
 	}
 
-	paypalAccount, err := testClient.CreatePaypalAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", createPaypalAccountData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
 
-	if !reflect.DeepEqual(paypalAccount, expected) {
-		t.Errorf("Unexpected result of CreatePaypalAccount func")
+	httpmock.RegisterRegexpResponder(
+		"POST",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/paypal-accounts"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-0d66f04d-4340-4820-87a3-721a5e4a2754\",\"type\":\"PAYPAL_ACCOUNT\",\"status\":\"ACTIVATED\",\"createdOn\":\"2021-10-21T14:07:23\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"email\":\"94105@asde.com\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/paypal-accounts/trm-0d66f04d-4340-4820-87a3-721a5e4a2754\"}]}"),
+		),
+	)
+
+	pg := PaypalAccountGateway{testClient}
+
+	paypalAccount, err := pg.CreatePaypalAccount(ctx, userToken, createPaypalAccountData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, paypalAccount)
 	}
 }
 
 func TestUpdatePaypalAccount(t *testing.T) {
-	testClient := NewTestPaypalAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	updatePaypalAccountData := UpdatePaypalAccountData{
 		Email: "tst5@gmali.comm",
@@ -220,21 +248,34 @@ func TestUpdatePaypalAccount(t *testing.T) {
 		},
 	}
 
-	paypalAccount, err := testClient.UpdatePaypalAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", "trm-0d66f04d-4340-4820-87a3-721a5e4a2754", updatePaypalAccountData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+	const paypalAccountToken = "trm-0d66f04d-4340-4820-87a3-721a5e4a2754"
 
-	if !reflect.DeepEqual(paypalAccount, expected) {
-		t.Errorf("Unexpected result of UpdatePaypalAccount func")
+	httpmock.RegisterRegexpResponder(
+		"PUT",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/paypal-accounts/"+paypalAccountToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-0d66f04d-4340-4820-87a3-721a5e4a2754\",\"type\":\"PAYPAL_ACCOUNT\",\"status\":\"ACTIVATED\",\"createdOn\":\"2021-10-21T14:07:23\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"email\":\"tst5@gmali.comm\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/paypal-accounts/trm-0d66f04d-4340-4820-87a3-721a5e4a2754\"}]}"),
+		),
+	)
+
+	pg := PaypalAccountGateway{testClient}
+
+	paypalAccount, err := pg.UpdatePaypalAccount(ctx, userToken, paypalAccountToken, updatePaypalAccountData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, paypalAccount)
 	}
 }
 
-
 func TestRetrievePaypalAccount(t *testing.T) {
-	testClient := NewTestPaypalAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &PaypalAccount{
 		Token:                  "trm-0d66f04d-4340-4820-87a3-721a5e4a2754",
@@ -253,12 +294,21 @@ func TestRetrievePaypalAccount(t *testing.T) {
 		},
 	}
 
-	paypalAccount, err := testClient.RetrievePaypalAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", "trm-0d66f04d-4340-4820-87a3-721a5e4a2754")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+	const paypalAccountToken = "trm-0d66f04d-4340-4820-87a3-721a5e4a2754"
 
-	if !reflect.DeepEqual(paypalAccount, expected) {
-		t.Errorf("Unexpected result of RetrievePaypalAccount func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/paypal-accounts/"+paypalAccountToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-0d66f04d-4340-4820-87a3-721a5e4a2754\",\"type\":\"PAYPAL_ACCOUNT\",\"status\":\"ACTIVATED\",\"createdOn\":\"2021-10-21T14:07:23\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"email\":\"94105@asde.com\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/paypal-accounts/trm-0d66f04d-4340-4820-87a3-721a5e4a2754\"}]}"),
+		),
+	)
+
+	pg := PaypalAccountGateway{testClient}
+
+	paypalAccount, err := pg.RetrievePaypalAccount(ctx, userToken, paypalAccountToken)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, paypalAccount)
 	}
 }

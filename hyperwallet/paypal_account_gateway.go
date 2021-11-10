@@ -8,13 +8,11 @@ import (
 )
 
 type PaypalAccountGateway struct {
-	Client
+	*Hyperwallet
 }
 
 func NewPaypalAccountGateway() *PaypalAccountGateway {
-	return &PaypalAccountGateway{
-		NewClient(),
-	}
+	return &PaypalAccountGateway{NewClient()}
 }
 
 func (c *PaypalAccountGateway) CreatePaypalAccount(ctx context.Context, userToken string, paypalAccountData CreatePaypalAccountData) (*PaypalAccount, error) {

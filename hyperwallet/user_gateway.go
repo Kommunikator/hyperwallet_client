@@ -8,13 +8,11 @@ import (
 )
 
 type UsersGateway struct {
-	Client
+	*Hyperwallet
 }
 
 func NewUsersGateway() *UsersGateway {
-	return &UsersGateway{
-		NewClient(),
-	}
+	return &UsersGateway{NewClient()}
 }
 
 func (c *UsersGateway) CreateUser(ctx context.Context, userData CreateUserData) (*User, error) {

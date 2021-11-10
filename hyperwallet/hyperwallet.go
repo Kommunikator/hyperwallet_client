@@ -3,43 +3,36 @@ package hyperwallet
 import (
 	"context"
 	"fmt"
-	"github.com/joho/godotenv"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
 
 const (
 	defaultTimeout = time.Second * 60
+	// todo Данные для доступа потом надо брать из переменных окружения
 	BaseApiUrlV3   = "https://api.sandbox.hyperwallet.com/rest/v3"
+	ProgramToken = ""
+	ApiUserName = ""
+	ApiPassword = ""
 )
 
-type Client interface {
-	Execute(ctx context.Context, method string, path string, urlQuery url.Values, body string) ([]byte, error)
-}
-
 type Hyperwallet struct {
-	BaseApiUrl   string
-	ProgramToken string
-	UserName     string
-	Password     string
+	baseApiUrl   string
+	programToken string
+	userName     string
+	password     string
 	HttpClient   *http.Client
 }
 
 func NewClient() *Hyperwallet {
-	err := godotenv.Load(".env")
-	if err != nil {
-		return nil
-	}
-
 	return &Hyperwallet{
-		BaseApiUrl:   BaseApiUrlV3,
-		ProgramToken: os.Getenv("PROGRAM_TOKEN"),
-		UserName:     os.Getenv("API_USER_NAME"),
-		Password:     os.Getenv("API_PASSWORD"),
+		baseApiUrl:   BaseApiUrlV3,
+		programToken: ProgramToken,
+		userName:     ApiUserName,
+		password:     ApiPassword,
 		HttpClient:   &http.Client{Timeout: defaultTimeout},
 	}
 }
@@ -52,7 +45,7 @@ func (h *Hyperwallet) Execute(ctx context.Context, method string, path string, u
 	request.URL.RawQuery = urlQuery.Encode()
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
-	request.SetBasicAuth(h.UserName, h.Password)
+	request.SetBasicAuth(h.userName, h.password)
 
 	response, err := h.HttpClient.Do(request)
 	if err != nil {

@@ -2,13 +2,16 @@ package hyperwallet
 
 import (
 	"context"
-	"reflect"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+	"regexp"
 	"testing"
+	"time"
 )
 
 func NewTestBankAccountGateway() *BankAccountGateway {
 	return &BankAccountGateway{
-		NewTestClient(),
+		NewClient(),
 	}
 }
 
@@ -27,8 +30,8 @@ func TestCreateBankAccountDataValidate(t *testing.T) {
 				TransferMethodCountry:  "US",
 				TransferMethodCurrency: "USD",
 				Type:                   "WIRE_ACCOUNT",
-				BankId:                 "AsdGas12345",
-				BankAccountId:          "987654321",
+				BankID:                 "AsdGas12345",
+				BankAccountID:          "987654321",
 				FirstName:              "Alex",
 				MiddleName:             "Serg",
 				LastName:               "Niki",
@@ -46,8 +49,8 @@ func TestCreateBankAccountDataValidate(t *testing.T) {
 				TransferMethodCountry:  "US",
 				TransferMethodCurrency: "USD",
 				Type:                   "WIRE_ACCOUNT",
-				BankId:                 "123456789AS",
-				BankAccountId:          "987654321",
+				BankID:                 "123456789AS",
+				BankAccountID:          "987654321",
 				FirstName:              "Alex!@!",
 				MiddleName:             "Serg",
 				LastName:               "Niki",
@@ -57,7 +60,7 @@ func TestCreateBankAccountDataValidate(t *testing.T) {
 				City:                   "San Francisco",
 				PostalCode:             "94105longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
 			},
-			"Bad value for BankId\n" +
+			"Bad value for BankID\n" +
 				"Bad value for FirstName\n" +
 				"Bad value for Country\n" +
 				"Bad value for AddressLine1\n" +
@@ -68,8 +71,8 @@ func TestCreateBankAccountDataValidate(t *testing.T) {
 				ProfileType:            PROFILE_TYPE_INDIVIDUAL,
 				TransferMethodCurrency: "USD",
 				Type:                   "WIRE_ACCOUNT",
-				BankId:                 "123456789AS",
-				BankAccountId:          "987654321",
+				BankID:                 "123456789AS",
+				BankAccountID:          "987654321",
 				FirstName:              "Alex!@!",
 				MiddleName:             "Serg",
 				LastName:               "Niki",
@@ -130,8 +133,8 @@ func TestUpdateBankAccountDataValidate(t *testing.T) {
 				TransferMethodCountry:  "US",
 				TransferMethodCurrency: "USD",
 				Type:                   "WIRE_ACCOUNT",
-				BankId:                 "123456789AS",
-				BankAccountId:          "987654321",
+				BankID:                 "123456789AS",
+				BankAccountID:          "987654321",
 				FirstName:              "Alex!@!",
 				MiddleName:             "Serg",
 				LastName:               "Niki",
@@ -141,7 +144,7 @@ func TestUpdateBankAccountDataValidate(t *testing.T) {
 				City:                   "San Francisco",
 				PostalCode:             "94105longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
 			},
-			"Bad value for BankId\n" +
+			"Bad value for BankID\n" +
 				"Bad value for FirstName\n" +
 				"Bad value for Country\n" +
 				"Bad value for AddressLine1\n" +
@@ -151,7 +154,7 @@ func TestUpdateBankAccountDataValidate(t *testing.T) {
 			UpdateBankAccountData{
 				ProfileType:   PROFILE_TYPE_INDIVIDUAL,
 				Type:          "WIRE_ACCOUNT",
-				BankAccountId: "987654321",
+				BankAccountID: "987654321",
 				FirstName:     "Alex!@!",
 				MiddleName:    "Serg",
 				LastName:      "Niki",
@@ -189,14 +192,14 @@ func TestUpdateBankAccountDataValidate(t *testing.T) {
 }
 
 func TestGetBankAccountList(t *testing.T) {
-	testClient := NewTestBankAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	bankAccounts, err := testClient.GetBankAccountList(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", GetBankAccountListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &BankAccountList{
 		Count:  1,
@@ -235,23 +238,41 @@ func TestGetBankAccountList(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(bankAccounts, expected) {
-		t.Errorf("Unexpected result of GetBankAccountList func")
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/bank-accounts"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":1,\"offset\":0,\"limit\":10,\"data\":[{\"token\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"type\":\"BANK_ACCOUNT\",\"status\":\"ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T13:19:06\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"bankName\":\"WELLS FARGO BANK                    \",\"branchId\":\"101089292\",\"bankAccountId\":\"****1343\",\"bankAccountPurpose\":\"SAVINGS\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alex\",\"middleName\":\"Serg\",\"lastName\":\"Niki\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/bank-accounts/trm-ea101b26-f009-4918-857b-19d226381fd9\"}]}]}"),
+		),
+	)
+
+	bg := BankAccountGateway{testClient}
+
+	bankAccountList, err := bg.GetBankAccountList(ctx, userToken, GetBankAccountListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, bankAccountList)
 	}
 }
 
 func TestCreateBankAccount(t *testing.T) {
-	testClient := NewTestBankAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	createBankAccountData := CreateBankAccountData{
 		ProfileType:            PROFILE_TYPE_INDIVIDUAL,
 		TransferMethodCountry:  "US",
 		TransferMethodCurrency: "USD",
 		Type:                   "WIRE_ACCOUNT",
-		BankId:                 "AsdGas12345",
-		BankAccountId:          "987654321",
+		BankID:                 "AsdGas12345",
+		BankAccountID:          "987654321",
 		FirstName:              "Alex",
 		MiddleName:             "Serg",
 		LastName:               "Niki",
@@ -260,11 +281,6 @@ func TestCreateBankAccount(t *testing.T) {
 		AddressLine1:           "575 Market St",
 		City:                   "San Francisco",
 		PostalCode:             "94105",
-	}
-
-	bankAccount, err := testClient.CreateBankAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", createBankAccountData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
 	}
 
 	expected := &BankAccount{
@@ -297,15 +313,33 @@ func TestCreateBankAccount(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(bankAccount, expected) {
-		t.Errorf("Unexpected result of CreateBankAccount func")
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+
+	httpmock.RegisterRegexpResponder(
+		"POST",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/bank-accounts"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"type\":\"BANK_ACCOUNT\",\"status\":\"ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T13:19:06\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"bankName\":\"WELLS FARGO BANK\",\"branchId\":\"101089292\",\"bankAccountId\":\"****1343\",\"bankAccountPurpose\":\"SAVINGS\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alex\",\"middleName\":\"Serg\",\"lastName\":\"Niki\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/bank-accounts/trm-ea101b26-f009-4918-857b-19d226381fd9\"}]}"),
+		),
+	)
+
+	bg := BankAccountGateway{testClient}
+
+	bankAccount, err := bg.CreateBankAccount(ctx, userToken, createBankAccountData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, bankAccount)
 	}
 }
 
 func TestUpdateBankAccount(t *testing.T) {
-	testClient := NewTestBankAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	updateBankAccountData := UpdateBankAccountData{
 		FirstName:              "Testios",
@@ -313,11 +347,6 @@ func TestUpdateBankAccount(t *testing.T) {
 		AddressLine1:           "5 Street 34/6",
 	}
 
-	bankAccount, err := testClient.UpdateBankAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", "trm-ea101b26-f009-4918-857b-19d226381fd9", updateBankAccountData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
-
 	expected := &BankAccount{
 		Token:                  "trm-ea101b26-f009-4918-857b-19d226381fd9",
 		Type:                   "BANK_ACCOUNT",
@@ -348,20 +377,34 @@ func TestUpdateBankAccount(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(bankAccount, expected) {
-		t.Errorf("Unexpected result of UpdateBankAccount func")
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+	const bankAccountToken = "trm-ea101b26-f009-4918-857b-19d226381fd9"
+
+	httpmock.RegisterRegexpResponder(
+		"PUT",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/bank-accounts/"+bankAccountToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"type\":\"BANK_ACCOUNT\",\"status\":\"ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T13:19:06\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"bankName\":\"WELLS FARGO BANK\",\"branchId\":\"101089292\",\"bankAccountId\":\"****1343\",\"bankAccountPurpose\":\"SAVINGS\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Testios\",\"middleName\":\"Serg\",\"lastName\":\"Tomoto\",\"addressLine1\":\"5 Street 34/6\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/bank-accounts/trm-ea101b26-f009-4918-857b-19d226381fd9\"}]}"),
+		),
+	)
+
+	bg := BankAccountGateway{testClient}
+
+	bankAccount, err := bg.UpdateBankAccount(ctx, userToken, bankAccountToken, updateBankAccountData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, bankAccount)
 	}
 }
 
 func TestRetrieveBankAccount(t *testing.T) {
-	testClient := NewTestBankAccountGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	bankAccount, err := testClient.RetrieveBankAccount(ctx, "usr-c9d3126d-e26d-459d-9d66-9538876848be", "trm-ea101b26-f009-4918-857b-19d226381fd9")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &BankAccount{
 		Token:                  "trm-ea101b26-f009-4918-857b-19d226381fd9",
@@ -393,7 +436,21 @@ func TestRetrieveBankAccount(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(bankAccount, expected) {
-		t.Errorf("Unexpected result of RetrieveBankAccount func")
+	const userToken = "usr-c9d3126d-e26d-459d-9d66-9538876848be"
+	const bankAccountToken = "trm-ea101b26-f009-4918-857b-19d226381fd9"
+
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/users/"+userToken+"/bank-accounts/"+bankAccountToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"type\":\"BANK_ACCOUNT\",\"status\":\"ACTIVATED\",\"verificationStatus\":\"NOT_REQUIRED\",\"createdOn\":\"2021-10-21T13:19:06\",\"transferMethodCountry\":\"US\",\"transferMethodCurrency\":\"USD\",\"bankName\":\"WELLS FARGO BANK\",\"branchId\":\"101089292\",\"bankAccountId\":\"****1343\",\"bankAccountPurpose\":\"SAVINGS\",\"userToken\":\"usr-c9d3126d-e26d-459d-9d66-9538876848be\",\"profileType\":\"INDIVIDUAL\",\"firstName\":\"Alex\",\"middleName\":\"Serg\",\"lastName\":\"Niki\",\"addressLine1\":\"575 Market St\",\"city\":\"San Francisco\",\"stateProvince\":\"CA\",\"country\":\"US\",\"postalCode\":\"94105\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/users/usr-c9d3126d-e26d-459d-9d66-9538876848be/bank-accounts/trm-ea101b26-f009-4918-857b-19d226381fd9\"}]}"),
+		),
+	)
+
+	bg := BankAccountGateway{testClient}
+
+	bankAccount, err := bg.RetrieveBankAccount(ctx, userToken, bankAccountToken)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, bankAccount)
 	}
 }

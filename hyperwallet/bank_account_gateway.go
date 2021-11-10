@@ -8,13 +8,11 @@ import (
 )
 
 type BankAccountGateway struct {
-	Client
+	*Hyperwallet
 }
 
 func NewBankAccountGateway() *BankAccountGateway {
-	return &BankAccountGateway{
-		NewClient(),
-	}
+	return &BankAccountGateway{NewClient()}
 }
 
 func (c *BankAccountGateway) CreateBankAccount(ctx context.Context, userToken string, bankAccountData CreateBankAccountData) (*BankAccount, error) {

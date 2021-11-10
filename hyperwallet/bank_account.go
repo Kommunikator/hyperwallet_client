@@ -45,8 +45,8 @@ type CreateBankAccountData struct {
 	TransferMethodCountry  string `json:"transferMethodCountry" validate:"required"`
 	TransferMethodCurrency string `json:"transferMethodCurrency" validate:"required"`
 	Type                   string `json:"type" validate:"required"`
-	BankId                 string `json:"bankId" validate:"required"`
-	BankAccountId          string `json:"bankAccountId" validate:"required"`
+	BankID                 string `json:"bankId" validate:"required"`
+	BankAccountID          string `json:"bankAccountId" validate:"required"`
 	FirstName              string `json:"firstName" validate:"required"`
 	MiddleName             string `json:"middleName" validate:"omitempty"`
 	LastName               string `json:"lastName" validate:"required"`
@@ -99,20 +99,20 @@ func (c *CreateBankAccountData) Validate() error {
 		errorTexts = append(errorTexts, "Bad value for Type")
 	}
 
-	m, err = regexp.MatchString(`^[a-zA-Z]{6}[0-9a-zA-Z]{5}$`, c.BankId)
+	m, err = regexp.MatchString(`^[a-zA-Z]{6}[0-9a-zA-Z]{5}$`, c.BankID)
 	if err != nil {
 		return err
 	}
 	if m == false {
-		errorTexts = append(errorTexts, "Bad value for BankId")
+		errorTexts = append(errorTexts, "Bad value for BankID")
 	}
 
-	m, err = regexp.MatchString(`^[a-zA-Z0-9-]{1,34}$`, c.BankAccountId)
+	m, err = regexp.MatchString(`^[a-zA-Z0-9-]{1,34}$`, c.BankAccountID)
 	if err != nil {
 		return err
 	}
 	if m == false {
-		errorTexts = append(errorTexts, "Bad value for BankAccountId")
+		errorTexts = append(errorTexts, "Bad value for BankAccountID")
 	}
 
 	m, err = regexp.MatchString(`^[\w',\-. ]{1,50}$`, c.FirstName)
@@ -208,8 +208,8 @@ type UpdateBankAccountData struct {
 	TransferMethodCountry  string `json:"transferMethodCountry" validate:"omitempty"`
 	TransferMethodCurrency string `json:"transferMethodCurrency" validate:"omitempty"`
 	Type                   string `json:"type" validate:"omitempty"`
-	BankId                 string `json:"bankId" validate:"omitempty"`
-	BankAccountId          string `json:"bankAccountId" validate:"omitempty"`
+	BankID                 string `json:"bankId" validate:"omitempty"`
+	BankAccountID          string `json:"bankAccountId" validate:"omitempty"`
 	FirstName              string `json:"firstName" validate:"omitempty"`
 	MiddleName             string `json:"middleName" validate:"omitempty"`
 	LastName               string `json:"lastName" validate:"omitempty"`
@@ -270,23 +270,23 @@ func (c *UpdateBankAccountData) Validate() error {
 		}
 	}
 
-	if c.BankId != "" {
-		m, err = regexp.MatchString(`^[a-zA-Z]{4}[a-zA-Z]{2}[0-9a-zA-Z]{2}[0-9a-zA-Z]{3}$`, c.BankId)
+	if c.BankID != "" {
+		m, err = regexp.MatchString(`^[a-zA-Z]{4}[a-zA-Z]{2}[0-9a-zA-Z]{2}[0-9a-zA-Z]{3}$`, c.BankID)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for BankId")
+			errorTexts = append(errorTexts, "Bad value for BankID")
 		}
 	}
 
-	if c.BankAccountId != "" {
-		m, err = regexp.MatchString(`^[a-zA-Z0-9-]{1,34}$`, c.BankAccountId)
+	if c.BankAccountID != "" {
+		m, err = regexp.MatchString(`^[a-zA-Z0-9-]{1,34}$`, c.BankAccountID)
 		if err != nil {
 			return err
 		}
 		if m == false {
-			errorTexts = append(errorTexts, "Bad value for BankAccountId")
+			errorTexts = append(errorTexts, "Bad value for BankAccountID")
 		}
 	}
 
@@ -387,7 +387,6 @@ func (c *UpdateBankAccountData) Validate() error {
 
 	return nil
 }
-
 
 type GetBankAccountListQuery struct {
 	CreatedBefore time.Time `url:"createdBefore,omitempty" layout:"2006-01-02T15:04:05"`

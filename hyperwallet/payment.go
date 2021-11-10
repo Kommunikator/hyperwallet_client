@@ -34,7 +34,7 @@ func (c *CreatePaymentData) Validate() error {
 		return err
 	}
 	if m == false {
-		errorTexts = append(errorTexts, "Bad value for ClientUserId")
+		errorTexts = append(errorTexts, "Bad value for ClientUserID")
 	}
 
 	if len(c.ClientPaymentID) > 50 {
@@ -81,7 +81,7 @@ type PaymentList struct {
 }
 
 type GetPaymentListQuery struct {
-	ClientUserId  string    `url:"clientUserId,omitempty"`
+	ClientUserID  string    `url:"clientUserId,omitempty"`
 	CreatedBefore time.Time `url:"createdBefore,omitempty" layout:"2006-01-02T15:04:05"`
 	CreatedAfter  time.Time `url:"createdBefore,omitempty" layout:"2006-01-02T15:04:05"`
 	Currency      string    `url:"currency,omitempty"`

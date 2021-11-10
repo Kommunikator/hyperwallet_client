@@ -2,16 +2,12 @@ package hyperwallet
 
 import (
 	"context"
-	"reflect"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+	"regexp"
 	"testing"
 	"time"
 )
-
-func NewTestPaymentGateway() *PaymentGateway {
-	return &PaymentGateway{
-		NewTestClient(),
-	}
-}
 
 func TestCreatePaymentDataValidate(t *testing.T) {
 	t.Parallel()
@@ -104,14 +100,14 @@ func TestCreatePaymentDataValidate(t *testing.T) {
 }
 
 func TestGetPaymentList(t *testing.T) {
-	testClient := NewTestPaymentGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	payments, err := testClient.GetPaymentList(ctx, GetPaymentListQuery{})
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &PaymentList{
 		Count:  2,
@@ -163,25 +159,41 @@ func TestGetPaymentList(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(payments, expected) {
-		t.Errorf("Unexpected result of GetPaymentList func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/payments"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"count\":2,\"offset\":0,\"limit\":10,\"data\":[{\"token\":\"pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\",\"status\":\"IN_PROGRESS\",\"createdOn\":\"2021-10-25T06:55:01\",\"amount\":\"100.00\",\"currency\":\"USD\",\"clientPaymentId\":\"163qwe4731sd1568skldfj73asd\",\"purpose\":\"OTHER\",\"expiresOn\":\"2022-04-23T06:55:01\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"memo\":\"\",\"notes\":\"\",\"releaseOn\":\"\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/payments/pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\"}]},{\"token\":\"pmt-476a97ac-882d-4d02-82f9-b7982656295b\",\"status\":\"IN_PROGRESS\",\"createdOn\":\"2021-10-25T09:01:38\",\"amount\":\"100.00\",\"currency\":\"USD\",\"clientPaymentId\":\"163qwe4731sd1568skldfj73asd\",\"purpose\":\"OTHER\",\"expiresOn\":\"2022-04-23T09:01:38\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"memo\":\"\",\"notes\":\"\",\"releaseOn\":\"\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/payments/pmt-476a97ac-882d-4d02-82f9-b7982656295b\"}]}]}"),
+		),
+	)
+
+	pg := PaymentGateway{testClient}
+
+	paymentList, err := pg.GetPaymentList(ctx, GetPaymentListQuery{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, paymentList)
 	}
 }
 
 func TestCreatePayment(t *testing.T) {
-	testClient := NewTestPaymentGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	createPaymentData := CreatePaymentData{
-		Amount:           "100",
-		ClientPaymentID:  "163qwe4731sd1568skldfj73asd",
-		Currency:         "USD",
-		DestinationToken: "trm-ea101b26-f009-4918-857b-19d226381fd9",
-		ProgramToken:     "prg-5cd8a525-0553-4e30-8e47-c5440b743855",
-		Purpose:          "OTHER",
-	}
-	
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
+
+		createPaymentData := CreatePaymentData{
+			Amount:           "100",
+			ClientPaymentID:  "163qwe4731sd1568skldfj73asd",
+			Currency:         "USD",
+			DestinationToken: "trm-ea101b26-f009-4918-857b-19d226381fd9",
+			ProgramToken:     "prg-5cd8a525-0553-4e30-8e47-c5440b743855",
+			Purpose:          "OTHER",
+		}
+
 	expected := &Payment{
 		Token:            "pmt-df5f8246-9af8-41aa-873d-34db7d8421c1",
 		Status:           "IN_PROGRESS",
@@ -204,20 +216,31 @@ func TestCreatePayment(t *testing.T) {
 		},
 	}
 
-	payment, err := testClient.CreatePayment(ctx, createPaymentData)
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	httpmock.RegisterRegexpResponder(
+		"POST",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/payments"),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\",\"status\":\"IN_PROGRESS\",\"createdOn\":\"2021-10-25T06:55:01\",\"amount\":\"100.00\",\"currency\":\"USD\",\"clientPaymentId\":\"163qwe4731sd1568skldfj73asd\",\"purpose\":\"OTHER\",\"expiresOn\":\"2022-04-23T06:55:01\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"memo\":\"\",\"notes\":\"\",\"releaseOn\":\"\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/payments/pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\"}]}"),
+		),
+	)
 
-	if !reflect.DeepEqual(payment, expected) {
-		t.Errorf("Unexpected result of CreatePayment func")
+	pg := PaymentGateway{testClient}
+
+	payment, err := pg.CreatePayment(ctx, createPaymentData)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, payment)
 	}
 }
 
 func TestRetrievePayment(t *testing.T) {
-	testClient := NewTestPaymentGateway()
+	t.Parallel()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	testClient := NewClient()
+
+	httpmock.ActivateNonDefault(testClient.HttpClient)
 
 	expected := &Payment{
 		Token:            "pmt-df5f8246-9af8-41aa-873d-34db7d8421c1",
@@ -241,12 +264,20 @@ func TestRetrievePayment(t *testing.T) {
 		},
 	}
 
-	payment, err := testClient.RetrievePayment(ctx, "pmt-df5f8246-9af8-41aa-873d-34db7d8421c1")
-	if err != nil {
-		t.Errorf("%s", err.Error())
-	}
+	const paymentToken = "pmt-df5f8246-9af8-41aa-873d-34db7d8421c1"
 
-	if !reflect.DeepEqual(payment, expected) {
-		t.Errorf("Unexpected result of CreatePayment func")
+	httpmock.RegisterRegexpResponder(
+		"GET",
+		regexp.MustCompile("https://api\\.sandbox\\.hyperwallet\\.com/rest/v3/payments/"+paymentToken),
+		httpmock.NewBytesResponder(200,
+			[]byte("{\"token\":\"pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\",\"status\":\"IN_PROGRESS\",\"createdOn\":\"2021-10-25T06:55:01\",\"amount\":\"100.00\",\"currency\":\"USD\",\"clientPaymentId\":\"163qwe4731sd1568skldfj73asd\",\"purpose\":\"OTHER\",\"expiresOn\":\"2022-04-23T06:55:01\",\"destinationToken\":\"trm-ea101b26-f009-4918-857b-19d226381fd9\",\"programToken\":\"prg-5cd8a525-0553-4e30-8e47-c5440b743855\",\"memo\":\"\",\"notes\":\"\",\"releaseOn\":\"\",\"links\":[{\"params\":{\"rel\":\"self\"},\"href\":\"https://api.sandbox.hyperwallet.com/rest/v3/payments/pmt-df5f8246-9af8-41aa-873d-34db7d8421c1\"}]}"),
+		),
+	)
+
+	pg := PaymentGateway{testClient}
+
+	payment, err := pg.RetrievePayment(ctx, paymentToken)
+	if assert.NoError(t, err) {
+		assert.Equal(t, expected, payment)
 	}
 }
